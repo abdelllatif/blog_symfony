@@ -11,6 +11,43 @@
         {% endblock %}
     </head>
     <body>
+        <nav style="padding: 1em; background: #f5f5f5; display: flex; justify-content: space-between;">
+            <div>
+                <a href="{{ path('app_home') }}">Home</a>
+            </div>
+            <div>
+                {% if app.user %}
+                    <div style="display: inline-block; position: relative;">
+                        <button style="background: none; border: none; cursor: pointer; display: flex; align-items: center;">
+                            {% if app.user.image %}
+                                <img src="{{ asset('uploads/users/' ~ app.user.image) }}" alt="Profile" style="width:32px; height:32px; border-radius:50%; margin-right:8px;">
+                            {% else %}
+                                <span style="width:32px; height:32px; border-radius:50%; background:#ccc; display:inline-block; margin-right:8px;"></span>
+                            {% endif %}
+                            {{ app.user.username }}
+                        </button>
+                        <div style="display:none; position:absolute; right:0; background:#fff; border:1px solid #ccc; min-width:120px; z-index:10;" id="user-dropdown">
+                            <a href="{{ path('app_profile') }}" style="display:block; padding:8px;">Profile</a>
+                            <a href="{{ path('app_logout') }}" style="display:block; padding:8px;">Logout</a>
+                        </div>
+                    </div>
+                    <script>
+                        // Simple dropdown toggle
+                        const btn = document.querySelector('nav button');
+                        const dropdown = document.getElementById('user-dropdown');
+                        btn && btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+                        });
+                        document.addEventListener('click', function(e) {
+                            if (!btn.contains(e.target)) dropdown.style.display = 'none';
+                        });
+                    </script>
+                {% else %}
+                    <a href="{{ path('app_login') }}">Login</a>
+                {% endif %}
+            </div>
+        </nav>
         {% block body %}{% endblock %}
     </body>
 </html>
