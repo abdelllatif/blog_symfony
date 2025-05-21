@@ -1,28 +1,71 @@
 <?php 
 namespace App\Controller;
 
+use App\Entity\User;
+use App\Form\RegisterForm;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 final class SecurityController extends AbstractController
 {
     #[Route('/register', name: 'app_register')]
-    public function register(): Response
+    public function register(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager): Response
     {
+        $user = new User();
+        $form = $this->createForm(RegisterForm::class, $user);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            // Encode the plain password
+            $user->setPassword(
+                $passwordHasher->hashPassword(
+                    $user,
+                    $form->get('plainPassword')->getData()
+                )
+            );
+
+            $entityManager->persist($user);
+            $entityManager->flush();
+
+            $this->addFlash('success', 'Your account has been created successfully! You can now log in.');
+
+            return $this->redirectToRoute('app_login');
+        }
+
         return $this->render('security/register.html.twig', [
-            'controller_name' => 'SecurityController',
+            'registrationForm' => $form->createView(),
         ]);
     }
 
-    #[Route('/login', name: 'app_login', methods: ['GET', 'POST'])]
-    public function login(): Response
+    #[Route('/login', name: 'app_login')]
+    public function login(AuthenticationUtils $authenticationUtils): Response
     {
+        // If user is already logged in, redirect to home
         if ($this->getUser()) {
             return $this->redirectToRoute('app_home');
         }
+
+        // Get the login error if there is one
+        $error = $authenticationUtils->getLastAuthenticationError();
+        
+        // Last username entered by the user
+        $lastUsername = $authenticationUtils->getLastUsername();
+
         return $this->render('security/login.html.twig', [
-            'controller_name' => 'SecurityController',
+            'last_username' => $lastUsername,
+            'error' => $error,
         ]);
+    }
+
+    #[Route('/logout', name: 'app_logout')]
+    public function logout(): void
+    {
+        // This method can be empty - it will be intercepted by the logout key on your firewall
+        throw new \Exception('Don\'t forget to activate logout in security.yaml');
     }
 }

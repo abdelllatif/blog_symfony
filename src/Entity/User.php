@@ -14,46 +14,47 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: 'string', length: 180, unique: true)]
-    private string $email;
-
-    #[ORM\Column(type: 'json')]
-    private array $roles = [];
-
-    #[ORM\Column(type: 'string')]
-    private string $password;
-
-    #[ORM\Column(type: 'string', length: 100)]
+    #[ORM\Column(length: 50)]
     private string $firstName;
 
-    #[ORM\Column(type: 'string', length: 100)]
+    #[ORM\Column(length: 50)]
     private string $lastName;
 
-    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    #[ORM\Column(length: 100, unique: true)]
+    private string $email;
+
+    #[ORM\Column(length: 255)]
+    private string $password;
+
+    #[ORM\Column(type: 'string', columnDefinition: "ENUM('admin', 'user') DEFAULT 'user'")]
+    private string $role = 'user';
+
+    #[ORM\Column(length: 60, nullable: true)]
     private ?string $work = null;
 
-    #[ORM\Column(type: 'string', length: 255, nullable: true)]
-    private ?string $studies = null;
-    
-    #[ORM\Column(type: 'string', length: 255, nullable: true)]
-    private ?string $image = null;
+    #[ORM\Column(length: 60, nullable: true)]
+    private ?string $studiedAt = null;
 
-    #[ORM\Column(type: 'datetime_immutable')]
-    private \DateTimeInterface $memberSince;
+    #[ORM\Column(length: 70, nullable: true)]
+    private ?string $profileImage = null;
 
-    /**
-     * @var Collection<int, Article>
-     */
-    #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'user_id')]
-    private Collection $articles;
+    #[ORM\Column]
+    private \DateTimeImmutable $createdAt;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class)]
+    private Collection $posts;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Comment::class)]
+    private Collection $comments;
 
     public function __construct()
     {
-        $this->memberSince = new \DateTimeImmutable();
-        $this->articles = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
+        $this->posts = new ArrayCollection();
+        $this->comments = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -80,16 +81,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getRoles(): array
     {
-        $roles = $this->roles;
-        $roles[] = 'ROLE_USER';
-
+        $roles = ['ROLE_USER'];
+        if ($this->role === 'admin') {
+            $roles[] = 'ROLE_ADMIN';
+        }
         return array_unique($roles);
     }
 
     public function setRoles(array $roles): static
     {
-        $this->roles = $roles;
+        if (in_array('ROLE_ADMIN', $roles)) {
+            $this->role = 'admin';
+        } else {
+            $this->role = 'user';
+        }
+        return $this;
+    }
 
+    public function getRole(): string
+    {
+        return $this->role;
+    }
+
+    public function setRole(string $role): static
+    {
+        if (!in_array($role, ['admin', 'user'])) {
+            throw new \InvalidArgumentException('Invalid role');
+        }
+        $this->role = $role;
         return $this;
     }
 
@@ -145,67 +164,92 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getStudies(): ?string
+    public function getStudiedAt(): ?string
     {
-        return $this->studies;
+        return $this->studiedAt;
     }
 
-    public function setStudies(?string $studies): static
+    public function setStudiedAt(?string $studiedAt): static
     {
-        $this->studies = $studies;
+        $this->studiedAt = $studiedAt;
 
         return $this;
     }
     
-    public function getImage(): ?string
+    public function getProfileImage(): ?string
     {
-        return $this->image;
+        return $this->profileImage;
     }
 
-    public function setImage(?string $image): self
+    public function setProfileImage(?string $profileImage): self
     {
-        $this->image = $image;
+        $this->profileImage = $profileImage;
         return $this;
     }
-    public function getMemberSince(): \DateTimeInterface
+
+    public function getCreatedAt(): \DateTimeImmutable
     {
-        return $this->memberSince;
+        return $this->createdAt;
     }
 
-    public function setMemberSince(\DateTimeInterface $memberSince): static
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
-        $this->memberSince = $memberSince;
+        $this->createdAt = $createdAt;
 
         return $this;
     }
 
     /**
-     * @return Collection<int, Article>
+     * @return Collection<int, Post>
      */
-    public function getArticles(): Collection
+    public function getPosts(): Collection
     {
-        return $this->articles;
+        return $this->posts;
     }
 
-    public function addArticle(Article $article): static
+    public function addPost(Post $post): self
     {
-        if (!$this->articles->contains($article)) {
-            $this->articles->add($article);
-            $article->setUserId($this);
+        if (!$this->posts->contains($post)) {
+            $this->posts->add($post);
+            $post->setUser($this);
         }
-
         return $this;
     }
 
-    public function removeArticle(Article $article): static
+    public function removePost(Post $post): self
     {
-        if ($this->articles->removeElement($article)) {
-            // set the owning side to null (unless already changed)
-            if ($article->getUserId() === $this) {
-                $article->setUserId(null);
+        if ($this->posts->removeElement($post)) {
+            if ($post->getUser() === $this) {
+                $post->setUser(null);
             }
         }
+        return $this;
+    }
 
+    /**
+     * @return Collection<int, Comment>
+     */
+    public function getComments(): Collection
+    {
+        return $this->comments;
+    }
+
+    public function addComment(Comment $comment): self
+    {
+        if (!$this->comments->contains($comment)) {
+            $this->comments->add($comment);
+            $comment->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeComment(Comment $comment): self
+    {
+        if ($this->comments->removeElement($comment)) {
+            if ($comment->getUser() === $this) {
+                $comment->setUser(null);
+            }
+        }
         return $this;
     }
 }

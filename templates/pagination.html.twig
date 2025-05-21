@@ -1,0 +1,44 @@
+{% if pagination.haveToPaginate %}
+    <div class="flex justify-center space-x-2">
+        {% if pagination.currentPage > 1 %}
+            <a href="{{ path(app.request.attributes.get('_route'), app.request.query.all|merge({'page': pagination.currentPage - 1})) }}" 
+               class="group relative px-4 py-2 text-sm font-semibold text-white">
+                <div class="absolute inset-0 bg-gray-800 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                <div class="relative flex items-center">
+                    <svg class="w-4 h-4 mr-2 transform group-hover:-translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Previous
+                </div>
+            </a>
+        {% endif %}
+
+        {% for page in pagination.pages %}
+            {% if page == pagination.currentPage %}
+                <span class="group relative px-4 py-2 text-sm font-semibold text-white">
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg blur opacity-75"></div>
+                    <div class="relative">{{ page }}</div>
+                </span>
+            {% else %}
+                <a href="{{ path(app.request.attributes.get('_route'), app.request.query.all|merge({'page': page})) }}" 
+                   class="group relative px-4 py-2 text-sm font-semibold text-white">
+                    <div class="absolute inset-0 bg-gray-800 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                    <div class="relative">{{ page }}</div>
+                </a>
+            {% endif %}
+        {% endfor %}
+
+        {% if pagination.currentPage < pagination.lastPage %}
+            <a href="{{ path(app.request.attributes.get('_route'), app.request.query.all|merge({'page': pagination.currentPage + 1})) }}" 
+               class="group relative px-4 py-2 text-sm font-semibold text-white">
+                <div class="absolute inset-0 bg-gray-800 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                <div class="relative flex items-center">
+                    Next
+                    <svg class="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </div>
+            </a>
+        {% endif %}
+    </div>
+{% endif %} 
